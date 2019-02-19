@@ -1,0 +1,84 @@
+{
+    "name": "wallet",
+    "version": "0.0.1",
+    "author": "kerinlin <18296613547@qq.com>",
+    "description": "An electron-vue project",
+    "license": null,
+    "main": "./main.js",
+    "scripts": {
+        "build": "node .electron-vue/build.js && electron-builder",
+        "build:dir": "node .electron-vue/build.js && electron-builder --dir",
+        "build:clean": "cross-env BUILD_TARGET=clean node .electron-vue/build.js",
+        "build:web": "cross-env BUILD_TARGET=web node .electron-vue/build.js",
+        "dev": "node .electron-vue/dev-runner.js",
+        "pack": "npm run pack:main && npm run pack:renderer",
+        "pack:main": "cross-env NODE_ENV=production webpack --progress --colors --config .electron-vue/webpack.main.config.js",
+        "pack:renderer": "cross-env NODE_ENV=production webpack --progress --colors --config .electron-vue/webpack.renderer.config.js",
+        "postinstall": ""
+    },
+    "build": {
+        "productName": "wallet",
+        "appId": "com.example.yourapp",
+        "directories": {
+            "output": "build"
+        },
+        "files": [
+            "dist/electron/**/*"
+        ],
+        "dmg": {
+            "contents": [
+                {
+                    "x": 410,
+                    "y": 150,
+                    "type": "link",
+                    "path": "/Applications"
+                },
+                {
+                    "x": 130,
+                    "y": 150,
+                    "type": "file"
+                }
+            ]
+        },
+        "mac": {
+            "icon": "build/icons/512LOGO.png"
+        },
+        "win": {
+            "icon": "build/icons/logo2.png_256x256.png"
+        },
+        "linux": {
+            "icon": "build/icons"
+        }
+    },
+    "dependencies": {
+        "axios": "^0.18.0",
+        "body-parser": "^1.18.3",
+        "crypto": "^1.0.1",
+        "electron-better-ipc": "^0.1.2",
+        "electron-log": "^2.2.17",
+        "electron-settings": "^3.2.0",
+        "ethereumjs-util": "^6.0.0",
+        "express": "^4.16.4",
+        "graceful-fs": "^4.1.15",
+        "irisnet-crypto": "https://github.com/irisnet/irisnet-crypto.git",
+        "iview": "^3.2.0",
+        "moment": "^2.24.0",
+        "object-assign": "^4.1.1",
+        "protobufjs": "^6.8.8",
+        "qs": "^6.6.0",
+        "randombytes": "^2.0.6",
+        
+        "safe-buffer": "^5.1.2",
+        "scrypt.js": "^0.3.0",
+        "tendermintelectronkey": "0.0.5",
+        "uuid": "^3.3.2",
+        "vue": "^2.5.16",
+        "vue-clipboard2": "^0.2.1",
+        "vue-electron": "^1.0.6",
+        "vue-router": "^3.0.1",
+        "vuex": "^3.0.1",
+        "vuex-electron": "^1.0.0",
+        "web3-utils": "^1.0.0-beta.46"
+    }
+    
+}

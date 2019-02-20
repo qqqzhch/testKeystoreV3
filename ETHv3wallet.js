@@ -4,9 +4,67 @@ var Buffer = require('safe-buffer').Buffer;
 var scryptsy = require('scrypt.js');
 var ethUtil = require('ethereumjs-util');
 var uuidv4 = require('uuid/v4');
-var TenderKeys =require('tendermintelectronkey')
+var TenderKeys =require('tendermintelectronkey');
+const bcrypt = require('@webfans/bcrypt');
+const saltRounds = 12;
 
 const createKeccakHash = require('keccak');
+var nacl = require('tweetnacl')
+nacl.util = require('tweetnacl-util')
+
+var tou8 = require('buffer-to-uint8array');
+var toBuffer = require('typedarray-to-buffer');
+
+
+var crypto = require('crypto');
+
+
+var encryptSymmetric = function (data, prefix, key) {
+  prefix = nacl.util.decodeUTF8(prefix)
+  var nonceLength = 24 - prefix.length
+  var randomNonce = new Uint8Array(nacl.randomBytes(nacl.secretbox.nonceLength))
+  var shortNonce = randomNonce.subarray(0, nonceLength)
+  var nonce = new Uint8Array(24)
+  nonce.set(prefix)
+  nonce.set(shortNonce, prefix.length)
+  var box = nacl.secretbox(data, nonce, key)
+  var result = new Uint8Array(nonceLength + box.length)
+  result.set(shortNonce)
+  result.set(box, nonceLength)
+  return result
+}
+
+var decryptSymmetric = function (data, prefix, key) {
+  try {
+    prefix = nacl.util.decodeUTF8(prefix)
+    var nonceLength = 24 - prefix.length
+    var shortNonce = data.subarray(0, nonceLength)
+    var nonce = new Uint8Array(24)
+    nonce.set(prefix)
+    nonce.set(shortNonce, prefix.length)
+    var result = nacl.secretbox.open(data.subarray(nonceLength), nonce, key)
+  } catch (err) {
+    return
+  }
+  return result
+}
+
+function MarshalBinary( message) {
+  let prefixBytes = 'tendermint/PrivKeyEd25519';
+  prefixBytes = Buffer.from(prefixBytes.concat(message.length));
+  prefixBytes = Buffer.concat([prefixBytes, message]);
+  return prefixBytes
+}
+
+function unMarshalBinary(message) {
+  let prefixBytes = 'tendermint/PrivKeyEd25519';
+  prefixBytes = Buffer.from(prefixBytes.concat(message.length));
+  prefixBytes = Buffer.concat([prefixBytes, message]);
+  return prefixBytes
+}
+
+
+
 
 var Wallet = function (priv, pub) {
     // 为啥呢？
@@ -51,62 +109,36 @@ var Wallet = function (priv, pub) {
   // https://github.com/ethereum/wiki/wiki/Web3-Secret-Storage-Definition
 Wallet.prototype.toV3 = function (password, opts) {
     // assert(this._privKey, 'This is a public key only wallet')
-  
-    opts = opts || {}
-    var salt = opts.salt || randomBytes(32)
-    var iv = opts.iv || randomBytes(16)
-  
-    var derivedKey
-    var kdf = opts.kdf || 'scrypt'
-    var kdfparams = {
-      dklen: opts.dklen || 32,
-      salt: salt.toString('hex')
+    if(Buffer.isBuffer(opts)){
+      console.log('need Buffer')
+      return ;
+
     }
-  
-    if (kdf === 'pbkdf2') {
-      kdfparams.c = opts.c || 262144
-      kdfparams.prf = 'hmac-sha256'
-      derivedKey = crypto.pbkdf2Sync(Buffer.from(password), salt, kdfparams.c, kdfparams.dklen, 'sha256')
-    } else if (kdf === 'scrypt') {
-      // FIXME: support progress reporting callback
-      kdfparams.n = opts.n || 262144
-      kdfparams.r = opts.r || 8
-      kdfparams.p = opts.p || 1
-      derivedKey = scryptsy(Buffer.from(password), salt, kdfparams.n, kdfparams.r, kdfparams.p, kdfparams.dklen)
-    } else {
-      throw new Error('Unsupported kdf')
-    }
-    console.log('-----')
-    console.log(opts.cipher || 'aes-128-ctr', derivedKey.slice(0, 16), iv)
+    //需要把这个函数里面的随机数提取出来
+    var usersalt = crypto.randomBytes(16);
+    var salt = bcrypt.genSaltSync(saltRounds,'a',usersalt);
 
+    var hash = bcrypt.hashSync(password, salt);
 
+    let hashs = crypto.createHash('sha256');
+        hashs.update(Buffer.from(hash));
+    let userkey = hashs.digest('hex');
 
-    console.log('-----')
-  
-    var cipher = crypto.createCipheriv(opts.cipher || 'aes-128-ctr', derivedKey.slice(0, 16), iv)
+    var userkeyF8 =tou8(Buffer.from(userkey,'hex') ) ;
+    var praviteFB = tou8(MarshalBinary(this._privKey));
+
+    var  cryptoResult = encryptSymmetric(praviteFB, '',  userkeyF8);
     
-    if (!cipher) {
-      throw new Error('Unsupported cipher')
-    }
-  
-    var ciphertext = runCipherBuffer(cipher, this._privKey)
-    console.log('-----2')
-    var mac = ethUtil.keccak256(Buffer.concat([ derivedKey.slice(16, 32), Buffer.from(ciphertext, 'hex') ]))
-    console.log('-----3')
+    
     return {
-      version: 3,
-      id: uuidv4({ random: opts.uuid || randomBytes(16) }),
       address: this.getAddress().toString('hex'),
       crypto: {
-        ciphertext: ciphertext.toString('hex'),
-        cipherparams: {
-          iv: iv.toString('hex')
-        },
-        cipher: opts.cipher || 'aes-128-ctr',
-        kdf: kdf,
-        kdfparams: kdfparams,
-        mac: mac.toString('hex')
-      }
+        text:toBuffer(cryptoResult).toString('hex'),
+        params: {
+          salt:usersalt.toString('hex') 
+        }
+      },
+      cipher:'bcrypt'
     }
   }
   
@@ -152,11 +184,14 @@ Wallet.prototype.toV3 = function (password, opts) {
   
     var derivedKey
     var kdfparams
-    if (json.crypto.kdf === 'scrypt') {
+    if (json.crypto.kdf === 'bcrypt') {
       kdfparams = json.crypto.kdfparams
   
       // FIXME: support progress reporting callback
-      derivedKey = scryptsy(Buffer.from(password), Buffer.from(kdfparams.salt, 'hex'), kdfparams.n, kdfparams.r, kdfparams.p, kdfparams.dklen)
+      // derivedKey = scryptsy(Buffer.from(password), Buffer.from(kdfparams.salt, 'hex'), kdfparams.n, kdfparams.r, kdfparams.p, kdfparams.dklen)
+      var saltbcrypt = bcrypt.genSaltSync(saltRounds);
+      derivedKey= bcrypt.hashSync(Buffer.from(password), saltbcrypt);
+
     } else if (json.crypto.kdf === 'pbkdf2') {
       kdfparams = json.crypto.kdfparams
   

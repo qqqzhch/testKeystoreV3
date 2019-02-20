@@ -51,8 +51,11 @@
         }
     },
     "dependencies": {
+        "@webfans/bcrypt": "^3.0.4",
         "axios": "^0.18.0",
+        "bcrypt": "^3.0.4",
         "body-parser": "^1.18.3",
+        "buffer-to-uint8array": "^1.1.0",
         "crypto": "^1.0.1",
         "electron-better-ipc": "^0.1.2",
         "electron-log": "^2.2.17",
@@ -60,6 +63,7 @@
         "ethereumjs-util": "^6.0.0",
         "express": "^4.16.4",
         "graceful-fs": "^4.1.15",
+        "hash.js": "^1.1.7",
         "irisnet-crypto": "https://github.com/irisnet/irisnet-crypto.git",
         "iview": "^3.2.0",
         "moment": "^2.24.0",
@@ -67,10 +71,12 @@
         "protobufjs": "^6.8.8",
         "qs": "^6.6.0",
         "randombytes": "^2.0.6",
-        
         "safe-buffer": "^5.1.2",
         "scrypt.js": "^0.3.0",
         "tendermintelectronkey": "0.0.5",
+        "tweetnacl": "^1.0.1",
+        "tweetnacl-util": "^0.15.0",
+        "typedarray-to-buffer": "^3.1.5",
         "uuid": "^3.3.2",
         "vue": "^2.5.16",
         "vue-clipboard2": "^0.2.1",
@@ -80,5 +86,4 @@
         "vuex-electron": "^1.0.0",
         "web3-utils": "^1.0.0-beta.46"
     }
-    
 }

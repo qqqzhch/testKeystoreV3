@@ -14,8 +14,15 @@ console.log(pravite.length);
 console.log(pravite.toString('hex').length);
 
 var wallet =new ETHv3wallet(pravite);
-
+console.log('pubKey',wallet.pubKey)
 const myPlaintextPassword = '123456';
 var result = wallet.toV3(myPlaintextPassword);
 
 console.log(JSON.stringify(result));
+console.log('----------------')
+var  myoldwallet = ETHv3wallet.fromV3(result,myPlaintextPassword);
+// console.log(myoldwallet)
+
+var ss = myoldwallet._privKey.toString('hex');
+console.log('private',ss)
+console.log('pubKey',myoldwallet.pubKey)
